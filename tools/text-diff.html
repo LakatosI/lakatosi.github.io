@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free online text diff tool - compare two text blocks and see differences">
+    <title>Text Diff Tool - LakatosI</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .diff-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .diff-panel {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .diff-panel h3 {
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            color: var(--secondary-color);
+        }
+
+        .diff-panel textarea {
+            flex: 1;
+            min-height: 300px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+
+        .diff-output {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .diff-result {
+            background-color: var(--light-gray);
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            min-height: 200px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .diff-result h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .diff-line {
+            padding: 2px 4px;
+            margin: 1px 0;
+        }
+
+        .diff-added {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .diff-removed {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .diff-unchanged {
+            background-color: transparent;
+            color: #666;
+        }
+
+        .controls {
+            margin: 1rem 0;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .stats {
+            margin: 1rem 0;
+            padding: 1rem;
+            background-color: #e8f4f8;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .stats strong {
+            color: var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .diff-container,
+            .diff-output {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>LakatosI</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/blog/">Blog</a>
+            <a href="/tools/">Tools</a>
+        </nav>
+    </header>
+
+    <main>
+        <h1>Text Diff Tool</h1>
+        <p>Compare two text blocks and see the differences highlighted. Perfect for comparing code, documents, or any text content.</p>
+
+        <div class="diff-container">
+            <div class="diff-panel">
+                <h3>Original Text</h3>
+                <textarea id="text1" placeholder="Paste your original text here..."></textarea>
+            </div>
+            <div class="diff-panel">
+                <h3>Modified Text</h3>
+                <textarea id="text2" placeholder="Paste your modified text here..."></textarea>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="comparTexts()">Compare Texts</button>
+            <button onclick="clearAll()">Clear All</button>
+            <button onclick="swapTexts()">Swap Texts</button>
+        </div>
+
+        <div id="stats" class="stats" style="display: none;"></div>
+
+        <div class="diff-output" id="output" style="display: none;">
+            <div class="diff-result" id="result1">
+                <h3>Original (with deletions)</h3>
+                <div id="diff1"></div>
+            </div>
+            <div class="diff-result" id="result2">
+                <h3>Modified (with additions)</h3>
+                <div id="diff2"></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 3rem;">
+            <h2>How to Use</h2>
+            <ol>
+                <li>Paste your original text in the left panel</li>
+                <li>Paste your modified text in the right panel</li>
+                <li>Click "Compare Texts" to see the differences</li>
+                <li>Red highlights show deletions, green highlights show additions</li>
+            </ol>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 LakatosI. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function comparTexts() {
+            const text1 = document.getElementById('text1').value;
+            const text2 = document.getElementById('text2').value;
+
+            if (!text1 && !text2) {
+                alert('Please enter some text to compare');
+                return;
+            }
+
+            const lines1 = text1.split('\n');
+            const lines2 = text2.split('\n');
+
+            const diff = computeDiff(lines1, lines2);
+
+            displayDiff(diff);
+            displayStats(diff);
+
+            document.getElementById('output').style.display = 'grid';
+            document.getElementById('stats').style.display = 'block';
+        }
+
+        function computeDiff(lines1, lines2) {
+            // Simple line-based diff algorithm
+            const result = [];
+            let i = 0, j = 0;
+
+            while (i < lines1.length || j < lines2.length) {
+                if (i >= lines1.length) {
+                    // Rest are additions
+                    result.push({ type: 'added', line: lines2[j], num: j + 1 });
+                    j++;
+                } else if (j >= lines2.length) {
+                    // Rest are deletions
+                    result.push({ type: 'removed', line: lines1[i], num: i + 1 });
+                    i++;
+                } else if (lines1[i] === lines2[j]) {
+                    // Lines match
+                    result.push({ type: 'unchanged', line: lines1[i], num1: i + 1, num2: j + 1 });
+                    i++;
+                    j++;
+                } else {
+                    // Lines differ - check if it's an addition or deletion
+                    const foundInText2 = lines2.slice(j).indexOf(lines1[i]);
+                    const foundInText1 = lines1.slice(i).indexOf(lines2[j]);
+
+                    if (foundInText2 !== -1 && (foundInText1 === -1 || foundInText2 < foundInText1)) {
+                        // Line from text2 is added
+                        result.push({ type: 'added', line: lines2[j], num: j + 1 });
+                        j++;
+                    } else if (foundInText1 !== -1) {
+                        // Line from text1 is removed
+                        result.push({ type: 'removed', line: lines1[i], num: i + 1 });
+                        i++;
+                    } else {
+                        // Both lines changed - mark as removed then added
+                        result.push({ type: 'removed', line: lines1[i], num: i + 1 });
+                        result.push({ type: 'added', line: lines2[j], num: j + 1 });
+                        i++;
+                        j++;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function displayDiff(diff) {
+            const diff1 = document.getElementById('diff1');
+            const diff2 = document.getElementById('diff2');
+
+            diff1.innerHTML = '';
+            diff2.innerHTML = '';
+
+            diff.forEach(item => {
+                if (item.type === 'removed' || item.type === 'unchanged') {
+                    const div = document.createElement('div');
+                    div.className = `diff-line diff-${item.type}`;
+                    div.textContent = item.line || ' ';
+                    diff1.appendChild(div);
+                }
+
+                if (item.type === 'added' || item.type === 'unchanged') {
+                    const div = document.createElement('div');
+                    div.className = `diff-line diff-${item.type}`;
+                    div.textContent = item.line || ' ';
+                    diff2.appendChild(div);
+                }
+            });
+        }
+
+        function displayStats(diff) {
+            const stats = {
+                added: diff.filter(d => d.type === 'added').length,
+                removed: diff.filter(d => d.type === 'removed').length,
+                unchanged: diff.filter(d => d.type === 'unchanged').length
+            };
+
+            const statsDiv = document.getElementById('stats');
+            statsDiv.innerHTML = `
+                <strong>Statistics:</strong>
+                <span style="color: #155724;">${stats.added} lines added</span>,
+                <span style="color: #721c24;">${stats.removed} lines removed</span>,
+                ${stats.unchanged} lines unchanged
+            `;
+        }
+
+        function clearAll() {
+            document.getElementById('text1').value = '';
+            document.getElementById('text2').value = '';
+            document.getElementById('output').style.display = 'none';
+            document.getElementById('stats').style.display = 'none';
+        }
+
+        function swapTexts() {
+            const text1 = document.getElementById('text1');
+            const text2 = document.getElementById('text2');
+            const temp = text1.value;
+            text1.value = text2.value;
+            text2.value = temp;
+        }
+    </script>
+</body>
+</html>
