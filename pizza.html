@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pizza Dough Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #FFF8F0;
+    --card: #FFFFFF;
+    --primary: #E85D26;
+    --primary-light: #FF7A45;
+    --primary-dark: #C94A1A;
+    --accent: #FFB347;
+    --accent-light: #FFD699;
+    --green: #4CAF50;
+    --green-light: #E8F5E9;
+    --blue: #42A5F5;
+    --blue-light: #E3F2FD;
+    --purple: #AB47BC;
+    --purple-light: #F3E5F5;
+    --text: #3E2723;
+    --text-light: #795548;
+    --border: #F0E0D0;
+    --shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --radius: 16px;
+  }
+
+  body {
+    font-family: 'Fredoka', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .container { max-width: 800px; margin: 0 auto; }
+
+  header { text-align: center; padding: 20px 0 10px; }
+  header h1 {
+    font-size: 2.2rem; font-weight: 700; color: var(--primary);
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+  }
+  header .pizza-icon { font-size: 2.8rem; }
+  header p { color: var(--text-light); margin-top: 4px; font-size: 1rem; }
+
+  .card {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 24px; margin-bottom: 20px; border: 2px solid var(--border); transition: border-color 0.2s;
+  }
+  .card:hover { border-color: var(--accent-light); }
+  .card-title {
+    font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Presets */
+  .presets-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .preset-btn {
+    font-family: 'Fredoka', sans-serif; border: 2px solid var(--border); background: var(--bg);
+    color: var(--text); padding: 8px 16px; border-radius: 40px; font-size: 0.9rem;
+    font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .preset-btn:hover { border-color: var(--primary); color: var(--primary); background: #FFF0E8; }
+  .preset-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+  .preset-desc {
+    font-size: 0.85rem; color: var(--text-light); margin-top: 8px; padding: 10px 14px;
+    background: #FFF3E0; border-radius: 12px; display: none; line-height: 1.5;
+  }
+  .preset-desc.visible { display: block; }
+
+  /* Recipe steps */
+  .step-list { list-style: none; counter-reset: steps; }
+  .step-item {
+    counter-increment: steps;
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; border-bottom: 2px dashed var(--border);
+    transition: background 0.2s;
+  }
+  .step-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .step-item:first-child { padding-top: 0; }
+
+  .step-number {
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+    background: var(--primary); color: white; font-weight: 700; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center; margin-top: 2px;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+  .step-detail { font-size: 0.9rem; color: var(--text-light); line-height: 1.5; }
+
+  .step-ingredients {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;
+  }
+  .ingredient-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 2px solid var(--border); border-radius: 10px;
+    padding: 6px 14px; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+    position: relative;
+  }
+  .ingredient-chip:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .ingredient-chip .ing-label { color: var(--text-light); font-size: 0.8rem; }
+  .ingredient-chip .ing-value { font-weight: 600; color: var(--text); }
+  .ingredient-chip.green { background: var(--green-light); border-color: var(--green); }
+  .ingredient-chip.blue { background: var(--blue-light); border-color: var(--blue); }
+  .ingredient-chip .edit-hint {
+    position: absolute; top: -8px; right: 4px; font-size: 0.65rem;
+    background: var(--accent); color: white; padding: 1px 6px; border-radius: 8px;
+    opacity: 0; transition: opacity 0.2s; pointer-events: none;
+  }
+  .ingredient-chip:hover .edit-hint { opacity: 1; }
+  .ingredient-chip.editing { border-color: var(--primary); background: #FFF5EE; }
+  .ingredient-chip.editing input {
+    font-family: 'Fredoka', sans-serif; border: none; outline: none; background: transparent;
+    font-size: 0.95rem; font-weight: 600; color: var(--primary); width: 60px; text-align: right;
+  }
+
+  /* Autolyse toggle */
+  .autolyse-row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .autolyse-row label { font-size: 0.9rem; font-weight: 500; color: var(--text-light); cursor: pointer; }
+  .toggle-switch {
+    position: relative; width: 48px; height: 26px; background: var(--border);
+    border-radius: 26px; cursor: pointer; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle-switch.active { background: var(--primary); }
+  .toggle-switch::after {
+    content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px;
+    background: white; border-radius: 50%; transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle-switch.active::after { transform: translateX(22px); }
+
+  /* Ball info */
+  .ball-info {
+    display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 14px 18px;
+    background: #FFF3E0; border-radius: 12px; border: 2px solid var(--accent-light);
+  }
+  .ball-info .emoji { font-size: 1.6rem; }
+  .ball-info .text { font-size: 0.9rem; color: var(--text-light); }
+  .ball-info .text strong { color: var(--text); }
+
+  .balls-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+  }
+  .balls-row label { font-size: 0.9rem; font-weight: 500; color: var(--text-light); white-space: nowrap; }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex; background: var(--bg); border-radius: 40px; padding: 4px; gap: 4px;
+    margin-bottom: 16px; border: 2px solid var(--border); width: fit-content;
+  }
+  .mode-btn {
+    font-family: 'Fredoka', sans-serif; border: none; background: transparent;
+    color: var(--text-light); padding: 8px 20px; border-radius: 36px; font-size: 0.95rem;
+    font-weight: 500; cursor: pointer; transition: all 0.2s;
+  }
+  .mode-btn.active { background: var(--primary); color: white; }
+
+  /* Input grid */
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 500px) { .input-grid { grid-template-columns: 1fr; } }
+  .input-group { display: flex; flex-direction: column; gap: 4px; }
+  .input-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-light); }
+
+  .input-wrap {
+    display: flex; align-items: center; border: 2px solid var(--border);
+    border-radius: 12px; overflow: hidden; transition: border-color 0.2s; background: white;
+  }
+  .input-wrap:focus-within { border-color: var(--primary); }
+  .input-wrap input {
+    font-family: 'Fredoka', sans-serif; border: none; outline: none; padding: 10px 14px;
+    font-size: 1.1rem; font-weight: 500; color: var(--text); width: 100%; background: transparent;
+  }
+  .input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .input-wrap input { -moz-appearance: textfield; }
+  .input-unit {
+    padding: 10px 14px; font-size: 0.85rem; font-weight: 500; color: var(--text-light);
+    background: var(--bg); white-space: nowrap; border-left: 2px solid var(--border);
+  }
+
+  .sourdough-section { display: none; }
+  .sourdough-section.visible { display: block; }
+
+  footer { text-align: center; padding: 20px; color: var(--text-light); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span class="pizza-icon">&#127829;</span> Pizza Dough Calculator</h1>
+    <p>Tweak any value &mdash; everything recalculates instantly!</p>
+  </header>
+
+  <!-- PRESETS -->
+  <div class="card">
+    <div class="card-title">&#127856; Presets</div>
+    <div class="presets-grid" id="presets"></div>
+    <div class="preset-desc" id="presetDesc"></div>
+  </div>
+
+  <!-- RECIPE STEPS (main focus) -->
+  <div class="card">
+    <div class="card-title">&#129370; Recipe Steps</div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:16px; align-items:center;">
+      <div class="autolyse-row" style="margin-bottom:0">
+        <div class="toggle-switch" id="autolyseToggle" onclick="toggleAutolyse()"></div>
+        <label onclick="toggleAutolyse()">Autolyse method</label>
+      </div>
+      <div class="balls-row" style="margin-bottom:0">
+        <label>Dough balls:</label>
+        <div class="input-wrap" style="width:80px">
+          <input type="number" id="numBalls" value="1" min="1" max="20" step="1" oninput="calc('totalWeight')">
+        </div>
+      </div>
+    </div>
+
+    <ol class="step-list" id="stepList"></ol>
+
+    <div class="ball-info" id="ballInfo" style="display:none">
+      <span class="emoji">&#129379;</span>
+      <span class="text" id="ballText"></span>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="card">
+    <div class="card-title">&#9881;&#65039; Settings</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="yeast" onclick="setMode('yeast')">Yeast Only</button>
+      <button class="mode-btn" data-mode="sourdough" onclick="setMode('sourdough')">Sourdough</button>
+    </div>
+
+    <div class="input-grid">
+      <div class="input-group">
+        <label>Total Dough Weight</label>
+        <div class="input-wrap">
+          <input type="number" id="totalWeight" value="800" min="100" step="10" oninput="calc('totalWeight')">
+          <span class="input-unit">g</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Hydration</label>
+        <div class="input-wrap">
+          <input type="number" id="hydration" value="62.5" min="40" max="100" step="0.5" oninput="calc('hydration')">
+          <span class="input-unit">%</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Salt</label>
+        <div class="input-wrap">
+          <input type="number" id="saltPct" value="1.5" min="0" max="5" step="0.1" oninput="calc('saltPct')">
+          <span class="input-unit">% of flour</span>
+        </div>
+      </div>
+      <div class="input-group">
+        <label>Yeast</label>
+        <div class="input-wrap">
+          <input type="number" id="yeastPct" value="1" min="0" max="5" step="0.1" oninput="calc('yeastPct')">
+          <span class="input-unit">% of flour</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sourdough-section" id="sourdoughSection">
+      <div style="height:16px"></div>
+      <div class="input-grid">
+        <div class="input-group">
+          <label>Sourdough Starter Amount</label>
+          <div class="input-wrap">
+            <input type="number" id="starterAmount" value="200" min="0" step="10" oninput="calc('starterAmount')">
+            <span class="input-unit">g</span>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Starter Flour Ratio</label>
+          <div class="input-wrap">
+            <input type="number" id="starterRatio" value="50" min="10" max="90" step="5" oninput="calc('starterRatio')">
+            <span class="input-unit">% flour</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Made with &#10084;&#65039; and lots of flour</footer>
+</div>
+
+<script>
+const PRESETS = [
+  { name: "Neapolitan", hydration: 60, salt: 2.5, yeast: 0.2, mode: "yeast", desc: "Classic Neapolitan \u2014 low hydration, minimal yeast, long 24h room-temp or 48-72h cold ferment. Thin, soft, charred crust." },
+  { name: "New York", hydration: 63, salt: 2, yeast: 0.5, mode: "yeast", desc: "NY-style \u2014 slightly higher hydration with a bit of oil for a foldable, chewy slice. Great overnight cold ferment." },
+  { name: "Pan Pizza", hydration: 67.5, salt: 1.5, yeast: 1, mode: "yeast", desc: "Thick, fluffy pan pizza (tava). Higher hydration for an airy, focaccia-like crumb." },
+  { name: "Detroit", hydration: 72, salt: 2, yeast: 0.8, mode: "yeast", desc: "Detroit-style \u2014 high hydration, baked in an oiled steel pan. Crispy, caramelized cheese edges." },
+  { name: "Focaccia", hydration: 78, salt: 2, yeast: 0.5, mode: "yeast", desc: "Airy, olive-oil-rich flatbread. Very high hydration makes it pillowy. Dimple generously!" },
+  { name: "Slow Rise", hydration: 62.5, salt: 1.5, yeast: 0.3, mode: "yeast", desc: "Low yeast for a 24-48h cold ferment. More complex flavor, better texture, very forgiving timing." },
+  { name: "Quick (Same Day)", hydration: 62.5, salt: 1.5, yeast: 1, mode: "yeast", desc: "Higher yeast for a 2-4 hour rise. Great when you want pizza tonight!" },
+  { name: "Sourdough Pizza", hydration: 65, salt: 2, yeast: 0, starterAmount: 200, starterRatio: 50, mode: "sourdough", desc: "Natural leaven only \u2014 no commercial yeast. Plan for 8-12h bulk ferment. Deep, tangy flavor." },
+  { name: "Hybrid Sourdough", hydration: 63, salt: 1.8, yeast: 0.3, starterAmount: 150, starterRatio: 50, mode: "sourdough", desc: "Best of both worlds \u2014 sourdough flavor with a small yeast boost for reliability. 6-8h rise." },
+];
+
+let mode = "yeast";
+let activePreset = null;
+let editingField = null;
+let showAutolyse = false;
+
+function el(id) { return document.getElementById(id); }
+function val(id) { return parseFloat(el(id).value) || 0; }
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  el('sourdoughSection').classList.toggle('visible', m === 'sourdough');
+  if (m === 'yeast') el('starterAmount').value = 0;
+  calc('totalWeight');
+}
+
+function toggleAutolyse() {
+  showAutolyse = !showAutolyse;
+  el('autolyseToggle').classList.toggle('active', showAutolyse);
+  calc('totalWeight');
+}
+
+function applyPreset(idx) {
+  const p = PRESETS[idx];
+  activePreset = idx;
+  document.querySelectorAll('.preset-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  el('hydration').value = p.hydration;
+  el('saltPct').value = p.salt;
+  el('yeastPct').value = p.yeast;
+  if (p.mode === 'sourdough') {
+    el('starterAmount').value = p.starterAmount || 200;
+    el('starterRatio').value = p.starterRatio || 50;
+    setMode('sourdough');
+  } else {
+    setMode('yeast');
+  }
+  el('presetDesc').textContent = p.desc;
+  el('presetDesc').classList.add('visible');
+  calc('totalWeight');
+}
+
+function initPresets() {
+  const grid = el('presets');
+  PRESETS.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'preset-btn';
+    btn.textContent = p.name;
+    btn.onclick = () => applyPreset(i);
+    grid.appendChild(btn);
+  });
+}
+
+function calc(source) {
+  if (!['preset'].includes(source)) {
+    activePreset = null;
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    el('presetDesc').classList.remove('visible');
+  }
+
+  const totalWeight = val('totalWeight');
+  const hydration = val('hydration') / 100;
+  const saltPct = val('saltPct') / 100;
+  const yeastPct = val('yeastPct') / 100;
+  const numBalls = Math.max(1, Math.round(val('numBalls')));
+  const starterAmount = mode === 'sourdough' ? val('starterAmount') : 0;
+  const starterFlourRatio = val('starterRatio') / 100;
+  const starterFlour = starterAmount * starterFlourRatio;
+  const starterWater = starterAmount * (1 - starterFlourRatio);
+  const ratioTotal = 1 + hydration + saltPct + yeastPct;
+
+  let totalFlour, totalWater, salt, yeast, addFlour, addWater;
+
+  if (source === 'flour') {
+    addFlour = editingField === 'flour' ? parseFloat(document.querySelector('[data-field="flour"] input')?.value) || 0 : 0;
+    totalFlour = addFlour + starterFlour;
+    totalWater = totalFlour * hydration;
+    addWater = totalWater - starterWater;
+    salt = totalFlour * saltPct;
+    yeast = totalFlour * yeastPct;
+    el('totalWeight').value = Math.round(totalFlour + totalWater + salt + yeast);
+  } else {
+    addFlour = Math.max(0, (totalWeight - starterAmount) / ratioTotal);
+    totalFlour = addFlour + starterFlour;
+    totalWater = totalFlour * hydration;
+    addWater = Math.max(0, totalWater - starterWater);
+    salt = totalFlour * saltPct;
+    yeast = totalFlour * yeastPct;
+  }
+
+  renderSteps({ totalFlour, addFlour, totalWater, addWater, salt, yeast, starterAmount, starterFlour, starterWater, numBalls, totalWeight: val('totalWeight') });
+}
+
+function chip(label, value, unit, field, cls) {
+  const editAttr = field ? `onclick="startChipEdit(this, '${field}')" data-field="${field}"` : '';
+  const hint = field ? '<span class="edit-hint">edit</span>' : '';
+  return `<span class="ingredient-chip ${cls || ''}" ${editAttr}>
+    ${hint}
+    <span class="ing-label">${label}</span>
+    <span class="ing-value">${formatNum(value)}${unit}</span>
+  </span>`;
+}
+
+function renderSteps(r) {
+  const list = el('stepList');
+  const autolyseFlour = Math.min(r.addFlour, r.addWater);
+  const remainingFlour = Math.max(0, r.addFlour - autolyseFlour);
+  const hasStarter = mode === 'sourdough' && r.starterAmount > 0;
+  const hasYeast = r.yeast > 0.001;
+
+  let steps = [];
+
+  if (showAutolyse) {
+    // AUTOLYSE FLOW
+    let step1Title = 'Autolyse';
+    let step1Detail = `Mix flour and water until just combined (no dry flour visible). Cover and rest for <strong>20\u201360 minutes</strong>.`;
+    let step1Chips = chip('Flour', autolyseFlour, 'g', 'flour', '') + chip('Water', r.addWater, 'g', 'water', '');
+    steps.push({ title: step1Title, detail: step1Detail, chips: step1Chips });
+
+    if (hasStarter) {
+      steps.push({
+        title: 'Add Starter',
+        detail: 'Tear the sourdough starter into small pieces over the dough. Fold and squeeze to incorporate.',
+        chips: chip('Starter', r.starterAmount, 'g', null, 'blue')
+          + chip('(flour)', r.starterFlour, 'g', null, 'blue')
+          + chip('(water)', r.starterWater, 'g', null, 'blue')
+      });
+    }
+
+    let additionsDetail = 'Add the remaining flour, salt' + (hasYeast ? ', and yeast' : '') + ' to the dough. Knead until smooth and elastic, <strong>8\u201312 minutes</strong> by hand or <strong>5\u20138 minutes</strong> with a mixer.';
+    let additionsChips = chip('Flour', remainingFlour, 'g', null, '')
+      + chip('Salt', r.salt, 'g', 'salt', 'green');
+    if (hasYeast) additionsChips += chip('Yeast', r.yeast, 'g', 'yeast', 'green');
+    steps.push({ title: 'Add Remaining Ingredients & Knead', detail: additionsDetail, chips: additionsChips });
+
+  } else {
+    // SIMPLE FLOW (no autolyse)
+    let mixDetail = 'Combine all dry and wet ingredients.' + (hasStarter ? ' Mix in the sourdough starter.' : '') + ' Knead until smooth and elastic, <strong>8\u201312 minutes</strong> by hand or <strong>5\u20138 minutes</strong> with a mixer.';
+    let mixChips = chip('Flour', r.addFlour, 'g', 'flour', '')
+      + chip('Water', r.addWater, 'g', 'water', '')
+      + chip('Salt', r.salt, 'g', 'salt', 'green');
+    if (hasYeast) mixChips += chip('Yeast', r.yeast, 'g', 'yeast', 'green');
+    if (hasStarter) {
+      mixChips += chip('Starter', r.starterAmount, 'g', null, 'blue')
+        + chip('(flour)', r.starterFlour, 'g', null, 'blue')
+        + chip('(water)', r.starterWater, 'g', null, 'blue');
+    }
+    steps.push({ title: 'Mix & Knead', detail: mixDetail, chips: mixChips });
+  }
+
+  // Bulk ferment
+  steps.push({
+    title: 'Bulk Ferment',
+    detail: 'Cover the bowl and let the dough rise until roughly doubled in size. Timing depends on temperature and yeast amount.',
+    chips: ''
+  });
+
+  // Divide & shape
+  const numBalls = r.numBalls;
+  if (numBalls > 1) {
+    const perBall = r.totalWeight / numBalls;
+    steps.push({
+      title: 'Divide & Shape',
+      detail: `Divide the dough into <strong>${numBalls} equal pieces</strong> (~${formatNum(perBall)}g each). Shape each piece into a tight ball. Cover and rest <strong>15\u201330 min</strong> before stretching.`,
+      chips: ''
+    });
+  } else {
+    steps.push({
+      title: 'Shape',
+      detail: 'Shape the dough into a tight ball. Cover and rest <strong>15\u201330 minutes</strong> before stretching.',
+      chips: ''
+    });
+  }
+
+  // Stretch & bake
+  steps.push({
+    title: 'Stretch & Bake',
+    detail: 'Stretch or press the dough into shape. Top as desired and bake in the hottest oven you can manage &mdash; <strong>250\u2013300\u00b0C</strong> (480\u2013570\u00b0F) for thin crust, or <strong>220\u2013250\u00b0C</strong> (430\u2013480\u00b0F) for pan style.',
+    chips: ''
+  });
+
+  // Summary row
+  let summaryChips = chip('Total flour', r.totalFlour, 'g', null, '')
+    + chip('Total water', r.totalWater, 'g', null, '')
+    + chip('Total dough', r.totalWeight, 'g', null, '');
+
+  list.innerHTML = steps.map((s, i) => `
+    <li class="step-item">
+      <span class="step-number">${i + 1}</span>
+      <div class="step-content">
+        <div class="step-title">${s.title}</div>
+        <div class="step-detail">${s.detail}</div>
+        ${s.chips ? '<div class="step-ingredients">' + s.chips + '</div>' : ''}
+      </div>
+    </li>
+  `).join('') + `
+    <li class="step-item" style="border-bottom:none; padding-bottom:0;">
+      <span class="step-number" style="background:var(--accent);">&#8721;</span>
+      <div class="step-content">
+        <div class="step-title">Totals</div>
+        <div class="step-ingredients">${summaryChips}</div>
+      </div>
+    </li>
+  `;
+
+  // Ball info
+  if (numBalls > 1) {
+    el('ballInfo').style.display = 'flex';
+    const perBall = r.totalWeight / numBalls;
+    el('ballText').innerHTML = `<strong>${numBalls} balls</strong> at <strong>${formatNum(perBall)}g</strong> each`;
+  } else {
+    el('ballInfo').style.display = 'none';
+  }
+}
+
+function formatNum(n) {
+  if (n === 0) return '0';
+  if (n < 10) return n.toFixed(1);
+  return Math.round(n).toLocaleString();
+}
+
+function startChipEdit(elem, field) {
+  if (elem.classList.contains('editing')) return;
+  const valSpan = elem.querySelector('.ing-value');
+  const currentVal = parseFloat(valSpan.textContent) || 0;
+  elem.classList.add('editing');
+  valSpan.innerHTML = `<input type="number" value="${currentVal}" min="0" step="1" autofocus>g`;
+  const inp = valSpan.querySelector('input');
+  inp.focus();
+  inp.select();
+  inp.addEventListener('blur', () => finishChipEdit(elem, field, inp.value));
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') inp.blur();
+    if (e.key === 'Escape') { inp.value = currentVal; inp.blur(); }
+  });
+  editingField = field;
+}
+
+function finishChipEdit(elem, field, value) {
+  editingField = null;
+  elem.classList.remove('editing');
+  const v = parseFloat(value) || 0;
+
+  const hydration = val('hydration') / 100;
+  const saltPct = val('saltPct') / 100;
+  const yeastPct = val('yeastPct') / 100;
+  const starterAmount = mode === 'sourdough' ? val('starterAmount') : 0;
+  const starterFlourRatio = val('starterRatio') / 100;
+  const starterFlour = starterAmount * starterFlourRatio;
+  const starterWater = starterAmount * (1 - starterFlourRatio);
+  const ratioTotal = 1 + hydration + saltPct + yeastPct;
+
+  let addFlour;
+  if (field === 'flour') {
+    // In autolyse mode the chip shows autolyse flour = min(addFlour, addWater)
+    // which equals addWater when addFlour > addWater. If they edit autolyse flour,
+    // we treat it as editing the total addFlour for simplicity in non-autolyse,
+    // and as editing the water-equivalent flour in autolyse mode.
+    // Simplest: treat as total flour to add.
+    addFlour = v;
+  } else if (field === 'water') {
+    addFlour = (v + starterWater) / hydration - starterFlour;
+  } else if (field === 'salt') {
+    const tf = saltPct > 0 ? v / saltPct : 0;
+    addFlour = tf - starterFlour;
+  } else if (field === 'yeast') {
+    const tf = yeastPct > 0 ? v / yeastPct : 0;
+    addFlour = tf - starterFlour;
+  } else {
+    calc('totalWeight');
+    return;
+  }
+
+  addFlour = Math.max(0, addFlour);
+  el('totalWeight').value = Math.round(addFlour * ratioTotal + starterAmount);
+  calc('totalWeight');
+}
+
+// Init
+initPresets();
+calc('totalWeight');
+</script>
+</body>
+</html>
